@@ -104,6 +104,16 @@ export default async function Page({ params, searchParams }: Props) {
           <div className="mt-5 rounded-lg bg-[#F3F4EC] p-4 text-sm text-[#4A554F]">
             {book.reason || "理由はまだ登録されていません。"}
           </div>
+          {/* 本の紹介 */}
+          {book.description && (
+          <div className="mt-5 rounded-lg bg-[#F8F7F3] p-4 text-sm text-[#4A554F]">
+            <p className="mb-2 font-medium text-[#2F3E34]">
+              本の紹介
+            </p>
+
+            <p>{book.description}</p>
+          </div>
+            )}
 
           {/* ボタン */}
           {isBorrowed ? (

@@ -10,10 +10,12 @@ export type Book = {
   category: string;
   reason: string;
   owner: string;
+  description: string;
   createdAt: string;
 };
 
 export const getBooks = cache(async (): Promise<Book[]> => {
+  console.log("GET BOOKS");
   const auth = new google.auth.JWT({
     email: process.env.GOOGLE_CLIENT_EMAIL,
     key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
@@ -27,7 +29,7 @@ export const getBooks = cache(async (): Promise<Book[]> => {
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: process.env.GOOGLE_SHEETS_ID,
-    range: "books!A:I",
+    range: "books!A:J",
   });
 
   const rows = response.data.values ?? [];
@@ -42,6 +44,7 @@ export const getBooks = cache(async (): Promise<Book[]> => {
     reason: row[6] ?? "",
     owner: row[7] ?? "",
     createdAt: row[8] ?? "",
+    description: row[9] ?? "",
   }));
 });
 

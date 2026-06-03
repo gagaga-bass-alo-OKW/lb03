@@ -13,6 +13,7 @@ export async function POST(request: Request) {
       category,
       reason,
       owner,
+      description,
     } = body;
 
     if (!title) {
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEETS_ID,
-      range: "books!A:I",
+      range: "books!A:J",
       valueInputOption: "USER_ENTERED",
       requestBody: {
         values: [
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
             reason ?? "",
             owner ?? "",
             createdAt,
+            description ?? "",
           ],
         ],
       },
@@ -69,6 +71,7 @@ export async function POST(request: Request) {
         reason,
         owner,
         createdAt,
+        description,
       },
     });
   } catch (error) {

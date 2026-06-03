@@ -15,6 +15,7 @@ export default function NewBookPage() {
   const [category, setCategory] = useState("教養");
   const [reason, setReason] = useState("");
   const [owner, setOwner] = useState("");
+  const [description, setDescription] =useState("");
 
   // ✅ ISBNからGoogle Books API取得
   const fetchBookInfo = async () => {
@@ -56,6 +57,8 @@ export default function NewBookPage() {
       setTitle(volumeInfo.title || "");
       setAuthor(volumeInfo.authors?.join(", ") || "");
       setPublisher(volumeInfo.publisher || "");
+      console.log("DESCRIPTION =", volumeInfo.description);
+      setDescription(volumeInfo.description || "");
 
     } catch (error) {
       console.error("FETCH ERROR =", error);
@@ -224,6 +227,7 @@ export default function NewBookPage() {
                       category,
                       reason,
                       owner,
+                      description,
                     }),
                   });
 
