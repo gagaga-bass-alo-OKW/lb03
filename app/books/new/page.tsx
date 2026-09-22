@@ -17,8 +17,13 @@ export default function NewBookPage() {
   const [owner, setOwner] = useState("");
   const [description, setDescription] =useState("");
 
+  const [isFetching, setIsFetching] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // ✅ ISBNからGoogle Books API取得
   const fetchBookInfo = async () => {
+    if (isFetching) return;
+    setIsFetching(true);
     try {
       console.log(
         "APIKEY =",
@@ -63,6 +68,8 @@ export default function NewBookPage() {
     } catch (error) {
       console.error("FETCH ERROR =", error);
       alert("取得失敗");
+    } finally {
+      setIsFetching(false);
     }
   };
 
@@ -92,9 +99,10 @@ export default function NewBookPage() {
         {/* 取得ボタン */}
         <button
           onClick={fetchBookInfo}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
+          disabled={isFetching}
+          className="bg-blue-600 text-white px-4 py-2 rounded disabled:cursor-not-allowed disabled:opacity-50"
         >
-          書籍情報を取得
+          {isFetching ? "取得中..." : "書籍情報を取得"}
         </button>
 
         {/* 取得結果 */}
@@ -213,6 +221,8 @@ export default function NewBookPage() {
             {/* 登録ボタン */}
             <button
               onClick={async () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 try {
                   const response = await fetch("/api/books", {
                     method: "POST",
@@ -236,16 +246,19 @@ export default function NewBookPage() {
                     router.refresh();
                   } else {
                     alert("登録失敗");
+                    setIsSubmitting(false);
                   }
 
                 } catch (error) {
                   console.error(error);
                   alert("登録失敗");
+                  setIsSubmitting(false);
                 }
               }}
-              className="bg-green-600 text-white px-4 py-2 rounded"
+              disabled={isSubmitting}
+              className="bg-green-600 text-white px-4 py-2 rounded disabled:cursor-not-allowed disabled:opacity-50"
             >
-              登録
+              {isSubmitting ? "登録中..." : "登録"}
             </button>
           </div>
         )}
