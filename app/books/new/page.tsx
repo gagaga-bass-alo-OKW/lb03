@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -75,7 +76,11 @@ export default function NewBookPage() {
 
   return (
     <main className="p-8">
-      <h1 className="text-3xl font-bold mb-6">
+      <Link href="/" className="text-[#5B6C60] hover:underline">
+        ← 一覧に戻る
+      </Link>
+
+      <h1 className="mt-4 text-3xl font-bold mb-6">
         蔵書登録
       </h1>
 
