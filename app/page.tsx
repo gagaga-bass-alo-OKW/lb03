@@ -27,7 +27,7 @@ export default async function Page() {
   // 本ごとに状態付与
   const booksWithData = await Promise.all(
     books.map(async (book) => {
-      const image = null;
+      const image = await getBookImageByIsbn(book.isbn);
       const isBorrowed = requests.some(
         (r) => r.bookId === book.id && r.status === "approved"
       );
