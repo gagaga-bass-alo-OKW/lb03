@@ -6,7 +6,16 @@ import { getBookImageByIsbn } from "@/lib/googleBooks";
 import BookList from "@/app/components/BookList";
 import SitePasswordForm from "@/app/components/SitePasswordForm";
 
-export default async function Page() {
+const PAGE_SIZE = 10;
+
+type Props = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+export default async function Page({ searchParams }: Props) {
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, Number(pageParam) || 1);
+
   const cookieStore = await cookies();
   const siteAuth = cookieStore.get("site_auth")?.value ?? null;
   const siteHash = process.env.SHARED_SITE_PASSWORD_HASH ?? null;
@@ -24,23 +33,35 @@ export default async function Page() {
   const books = await getBooks();
   const requests = await getRequests();
 
-  // 本ごとに状態付与
-  const booksWithData = await Promise.all(
-    books.map(async (book) => {
-      const image = await getBookImageByIsbn(book.isbn);
-      const isBorrowed = requests.some(
-        (r) => r.bookId === book.id && r.status === "approved"
-      );
-
-      return { ...book, image, isBorrowed };
-    })
-  );
+  // 本ごとに貸出状態を付与
+  const booksWithStatus = books.map((book) => ({
+    ...book,
+    isBorrowed: requests.some(
+      (r) => r.bookId === book.id && r.status === "approved"
+    ),
+  }));
 
   // 貸出中を上に並べる
-  const sortedBooks = [...booksWithData].sort((a, b) => {
+  const sortedBooks = [...booksWithStatus].sort((a, b) => {
     if (a.isBorrowed === b.isBorrowed) return 0;
     return a.isBorrowed ? -1 : 1;
   });
+
+  // ページ分割してから、表示するページの分だけ画像を取得する
+  // （全件まとめて画像取得すると本が増えるほど表示が遅くなるため）
+  const totalPages = Math.max(1, Math.ceil(sortedBooks.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pagedBooks = sortedBooks.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
+
+  const pagedBooksWithImages = await Promise.all(
+    pagedBooks.map(async (book) => ({
+      ...book,
+      image: await getBookImageByIsbn(book.isbn),
+    }))
+  );
 
   return (
     <main className="min-h-screen bg-[#F7F5F0] px-6 py-10">
@@ -62,12 +83,44 @@ export default async function Page() {
         </Link>
 
         {/* ✅ フィルター付き一覧 */}
-        <BookList books={sortedBooks} />
+        <BookList books={pagedBooksWithImages} />
 
         {books.length === 0 && (
           <p className="mt-10 text-center text-[#8A948C]">
             まだ本が登録されていません
           </p>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-center gap-2">
+            <Link
+              href={`/?page=${Math.max(1, safePage - 1)}`}
+              aria-disabled={safePage === 1}
+              className={`rounded-full px-4 py-1 text-sm ${
+                safePage === 1
+                  ? "pointer-events-none bg-[#E0DED7] text-[#B8BCB2]"
+                  : "bg-[#E0DED7] text-[#2F3E34] hover:bg-[#D3D0C7]"
+              }`}
+            >
+              ← 前へ
+            </Link>
+
+            <span className="text-sm text-[#5B6C60]">
+              {safePage} / {totalPages}
+            </span>
+
+            <Link
+              href={`/?page=${Math.min(totalPages, safePage + 1)}`}
+              aria-disabled={safePage === totalPages}
+              className={`rounded-full px-4 py-1 text-sm ${
+                safePage === totalPages
+                  ? "pointer-events-none bg-[#E0DED7] text-[#B8BCB2]"
+                  : "bg-[#E0DED7] text-[#2F3E34] hover:bg-[#D3D0C7]"
+              }`}
+            >
+              次へ →
+            </Link>
+          </div>
         )}
       </div>
     </main>
