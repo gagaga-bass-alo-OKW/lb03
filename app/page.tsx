@@ -5,15 +5,17 @@ import { getRequests } from "@/lib/requests";
 import { getBookImageByIsbn } from "@/lib/googleBooks";
 import BookList from "@/app/components/BookList";
 import SitePasswordForm from "@/app/components/SitePasswordForm";
+import { CATEGORIES } from "@/lib/categories";
 
 const PAGE_SIZE = 10;
 
 type Props = {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; category?: string }>;
 };
 
 export default async function Page({ searchParams }: Props) {
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, category } = await searchParams;
+  const selectedCategory = category ?? "";
   const currentPage = Math.max(1, Number(pageParam) || 1);
 
   const cookieStore = await cookies();
@@ -47,11 +49,38 @@ export default async function Page({ searchParams }: Props) {
     return a.isBorrowed ? -1 : 1;
   });
 
+  // カテゴリーの選択肢（登録済みデータにしかないカテゴリーも出す）
+  const categories = [
+    ...CATEGORIES,
+    ...new Set(
+      books
+        .map((b) => b.category)
+        .filter(
+          (c) => c && !(CATEGORIES as readonly string[]).includes(c)
+        )
+    ),
+  ];
+  const countByCategory = (c: string) =>
+    books.filter((b) => b.category === c).length;
+
+  // カテゴリーで絞り込み（ページ分割より前に行う）
+  const filteredBooks = selectedCategory
+    ? sortedBooks.filter((b) => b.category === selectedCategory)
+    : sortedBooks;
+
+  const pageHref = (page: number) => {
+    const params = new URLSearchParams();
+    if (selectedCategory) params.set("category", selectedCategory);
+    if (page > 1) params.set("page", String(page));
+    const query = params.toString();
+    return query ? `/?${query}` : "/";
+  };
+
   // ページ分割してから、表示するページの分だけ画像を取得する
   // （全件まとめて画像取得すると本が増えるほど表示が遅くなるため）
-  const totalPages = Math.max(1, Math.ceil(sortedBooks.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredBooks.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
-  const pagedBooks = sortedBooks.slice(
+  const pagedBooks = filteredBooks.slice(
     (safePage - 1) * PAGE_SIZE,
     safePage * PAGE_SIZE
   );
@@ -82,19 +111,53 @@ export default async function Page({ searchParams }: Props) {
           ＋ 本を追加する
         </Link>
 
+        {/* カテゴリー別 */}
+        <nav className="mb-6 flex flex-wrap gap-2">
+          <Link
+            href="/"
+            className={`rounded-full px-4 py-1 text-sm ${
+              !selectedCategory
+                ? "bg-[#4F7D62] text-white"
+                : "bg-[#E0DED7] text-[#2F3E34] hover:bg-[#D3D0C7]"
+            }`}
+          >
+            すべて（{books.length}）
+          </Link>
+
+          {categories.map((c) => (
+            <Link
+              key={c}
+              href={`/?category=${encodeURIComponent(c)}`}
+              className={`rounded-full px-4 py-1 text-sm ${
+                selectedCategory === c
+                  ? "bg-[#4F7D62] text-white"
+                  : "bg-[#E0DED7] text-[#2F3E34] hover:bg-[#D3D0C7]"
+              }`}
+            >
+              {c}（{countByCategory(c)}）
+            </Link>
+          ))}
+        </nav>
+
         {/* ✅ フィルター付き一覧 */}
         <BookList books={pagedBooksWithImages} />
 
-        {books.length === 0 && (
+        {books.length === 0 ? (
           <p className="mt-10 text-center text-[#8A948C]">
             まだ本が登録されていません
           </p>
+        ) : (
+          filteredBooks.length === 0 && (
+            <p className="mt-10 text-center text-[#8A948C]">
+              このカテゴリーの本はまだありません
+            </p>
+          )
         )}
 
         {totalPages > 1 && (
           <div className="mt-8 flex items-center justify-center gap-2">
             <Link
-              href={`/?page=${Math.max(1, safePage - 1)}`}
+              href={pageHref(Math.max(1, safePage - 1))}
               aria-disabled={safePage === 1}
               className={`rounded-full px-4 py-1 text-sm ${
                 safePage === 1
@@ -110,7 +173,7 @@ export default async function Page({ searchParams }: Props) {
             </span>
 
             <Link
-              href={`/?page=${Math.min(totalPages, safePage + 1)}`}
+              href={pageHref(Math.min(totalPages, safePage + 1))}
               aria-disabled={safePage === totalPages}
               className={`rounded-full px-4 py-1 text-sm ${
                 safePage === totalPages

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import BarcodeScanner from "./BarcodeScanner";
+import { CATEGORIES } from "@/lib/categories";
 
 export default function NewBookPage() {
   const router = useRouter();
@@ -222,12 +223,9 @@ export default function NewBookPage() {
                 onChange={(e) => setCategory(e.target.value)}
                 className="border rounded px-3 py-2 w-full"
               >
-                <option>教養</option>
-                <option>専門書</option>
-                <option>小説</option>
-                <option>受験参考書</option>
-                <option>漫画</option>
-                <option>その他</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
               </select>
             </div>
 
