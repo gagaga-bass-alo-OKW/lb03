@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { getBooks } from "@/lib/books";
 import { getRequests } from "@/lib/requests";
 import { getBookImageByIsbn } from "@/lib/googleBooks";
@@ -7,6 +6,7 @@ import BookList from "@/app/components/BookList";
 import SitePasswordForm from "@/app/components/SitePasswordForm";
 import { CATEGORIES } from "@/lib/categories";
 import { isOverdue } from "@/lib/dueDate";
+import { isSiteLocked } from "@/lib/siteAuth";
 
 const PAGE_SIZE = 10;
 
@@ -28,12 +28,8 @@ export default async function Page({ searchParams }: Props) {
     SORTS.find((s) => s.key === sort)?.key ?? "borrowed";
   const currentPage = Math.max(1, Number(pageParam) || 1);
 
-  const cookieStore = await cookies();
-  const siteAuth = cookieStore.get("site_auth")?.value ?? null;
-  const siteHash = process.env.SHARED_SITE_PASSWORD_HASH ?? null;
-
   // If a site password is configured and the cookie doesn't match, show password form
-  if (siteHash && siteAuth !== siteHash) {
+  if (await isSiteLocked()) {
     return (
       <main className="min-h-screen bg-[#F7F5F0] px-6 py-10">
         <div className="mx-auto max-w-3xl">
@@ -128,12 +124,21 @@ export default async function Page({ searchParams }: Props) {
           コミュニティで本を共有しよう
         </p>
 
-        <Link
-          href="/books/new"
-          className="mb-6 inline-block rounded-full bg-[#4F7D62] px-5 py-2 text-sm text-white hover:bg-[#3E644F]"
-        >
-          ＋ 本を追加する
-        </Link>
+        <div className="mb-6 flex flex-wrap gap-2">
+          <Link
+            href="/books/new"
+            className="inline-block rounded-full bg-[#4F7D62] px-5 py-2 text-sm text-white hover:bg-[#3E644F]"
+          >
+            ＋ 本を追加する
+          </Link>
+
+          <Link
+            href="/me"
+            className="inline-block rounded-full border border-[#4F7D62] px-5 py-2 text-sm text-[#4F7D62] hover:bg-[#E8F1EC]"
+          >
+            マイページ
+          </Link>
+        </div>
 
         {/* カテゴリー別 */}
         <nav className="mb-6 flex flex-wrap gap-2">
