@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { cache } from "react";
+import { normalizeCategory } from "@/lib/categories";
 
 export type Book = {
   id: string;
@@ -40,7 +41,7 @@ export const getBooks = cache(async (): Promise<Book[]> => {
     title: row[2] ?? "",
     author: row[3] ?? "",
     publisher: row[4] ?? "",
-    category: row[5] ?? "",
+    category: normalizeCategory(row[5] ?? ""),
     reason: row[6] ?? "",
     owner: row[7] ?? "",
     createdAt: row[8] ?? "",
