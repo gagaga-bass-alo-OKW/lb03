@@ -6,16 +6,26 @@ import { getBookImageByIsbn } from "@/lib/googleBooks";
 import BookList from "@/app/components/BookList";
 import SitePasswordForm from "@/app/components/SitePasswordForm";
 import { CATEGORIES } from "@/lib/categories";
+import { isOverdue } from "@/lib/dueDate";
 
 const PAGE_SIZE = 10;
 
+const SORTS = [
+  { key: "borrowed", label: "貸出中を先頭" },
+  { key: "new", label: "新着順" },
+  { key: "title", label: "タイトル順" },
+] as const;
+type SortKey = (typeof SORTS)[number]["key"];
+
 type Props = {
-  searchParams: Promise<{ page?: string; category?: string }>;
+  searchParams: Promise<{ page?: string; category?: string; sort?: string }>;
 };
 
 export default async function Page({ searchParams }: Props) {
-  const { page: pageParam, category } = await searchParams;
+  const { page: pageParam, category, sort } = await searchParams;
   const selectedCategory = category ?? "";
+  const selectedSort: SortKey =
+    SORTS.find((s) => s.key === sort)?.key ?? "borrowed";
   const currentPage = Math.max(1, Number(pageParam) || 1);
 
   const cookieStore = await cookies();
@@ -41,12 +51,20 @@ export default async function Page({ searchParams }: Props) {
     isBorrowed: requests.some(
       (r) => r.bookId === book.id && r.status === "approved"
     ),
+    isOverdue: requests.some((r) => r.bookId === book.id && isOverdue(r)),
   }));
 
-  // 貸出中を上に並べる
   const sortedBooks = [...booksWithStatus].sort((a, b) => {
-    if (a.isBorrowed === b.isBorrowed) return 0;
-    return a.isBorrowed ? -1 : 1;
+    switch (selectedSort) {
+      case "new":
+        return b.createdAt.localeCompare(a.createdAt);
+      case "title":
+        return a.title.localeCompare(b.title, "ja");
+      default:
+        // 貸出中を上に並べる
+        if (a.isBorrowed === b.isBorrowed) return 0;
+        return a.isBorrowed ? -1 : 1;
+    }
   });
 
   // カテゴリーの選択肢（登録済みデータにしかないカテゴリーも出す）
@@ -68,9 +86,15 @@ export default async function Page({ searchParams }: Props) {
     ? sortedBooks.filter((b) => b.category === selectedCategory)
     : sortedBooks;
 
-  const pageHref = (page: number) => {
+  // 今のカテゴリー・並び順を保ったままURLを作る
+  const listHref = ({
+    category = selectedCategory,
+    sort = selectedSort,
+    page = 1,
+  }: { category?: string; sort?: SortKey; page?: number }) => {
     const params = new URLSearchParams();
-    if (selectedCategory) params.set("category", selectedCategory);
+    if (category) params.set("category", category);
+    if (sort !== "borrowed") params.set("sort", sort);
     if (page > 1) params.set("page", String(page));
     const query = params.toString();
     return query ? `/?${query}` : "/";
@@ -114,7 +138,7 @@ export default async function Page({ searchParams }: Props) {
         {/* カテゴリー別 */}
         <nav className="mb-6 flex flex-wrap gap-2">
           <Link
-            href="/"
+            href={listHref({ category: "" })}
             className={`rounded-full px-4 py-1 text-sm ${
               !selectedCategory
                 ? "bg-[#4F7D62] text-white"
@@ -127,7 +151,7 @@ export default async function Page({ searchParams }: Props) {
           {categories.map((c) => (
             <Link
               key={c}
-              href={`/?category=${encodeURIComponent(c)}`}
+              href={listHref({ category: c })}
               className={`rounded-full px-4 py-1 text-sm ${
                 selectedCategory === c
                   ? "bg-[#4F7D62] text-white"
@@ -138,6 +162,24 @@ export default async function Page({ searchParams }: Props) {
             </Link>
           ))}
         </nav>
+
+        {/* 並び順 */}
+        <div className="mb-6 flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-[#8A948C]">並び順：</span>
+          {SORTS.map((s) => (
+            <Link
+              key={s.key}
+              href={listHref({ sort: s.key })}
+              className={
+                selectedSort === s.key
+                  ? "font-semibold text-[#4F7D62] underline underline-offset-4"
+                  : "text-[#5B6C60] hover:underline"
+              }
+            >
+              {s.label}
+            </Link>
+          ))}
+        </div>
 
         {/* ✅ フィルター付き一覧 */}
         <BookList books={pagedBooksWithImages} />
@@ -157,7 +199,7 @@ export default async function Page({ searchParams }: Props) {
         {totalPages > 1 && (
           <div className="mt-8 flex items-center justify-center gap-2">
             <Link
-              href={pageHref(Math.max(1, safePage - 1))}
+              href={listHref({ page: Math.max(1, safePage - 1) })}
               aria-disabled={safePage === 1}
               className={`rounded-full px-4 py-1 text-sm ${
                 safePage === 1
@@ -173,7 +215,7 @@ export default async function Page({ searchParams }: Props) {
             </span>
 
             <Link
-              href={pageHref(Math.min(totalPages, safePage + 1))}
+              href={listHref({ page: Math.min(totalPages, safePage + 1) })}
               aria-disabled={safePage === totalPages}
               className={`rounded-full px-4 py-1 text-sm ${
                 safePage === totalPages

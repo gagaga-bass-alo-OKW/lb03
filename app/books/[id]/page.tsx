@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getBookById } from "@/lib/books";
 import { getRequestsByBookId } from "@/lib/requests";
 import RequestStatusButtons from "./RequestStatusButtons";
+import { daysOverdue, isOverdue, parseDueDate } from "@/lib/dueDate";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -160,8 +161,15 @@ export default async function Page({ params, searchParams }: Props) {
                     {getStatusLabel(request.status)}
                   </span>
 
+                  {isOverdue(request) && (
+                    <span className="mt-2 ml-2 inline-block rounded-full bg-[#F8E3E0] px-3 py-1 text-xs text-[#B5483B]">
+                      延滞中（{daysOverdue(request.period)}日）
+                    </span>
+                  )}
+
                   <p className="mt-2 text-sm text-[#5B6C60]">
-                    希望期間：{request.period || "未指定"}
+                    {parseDueDate(request.period) ? "返却予定日" : "希望期間"}：
+                    {request.period || "未指定"}
                   </p>
                 </div>
 

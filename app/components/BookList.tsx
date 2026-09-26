@@ -11,6 +11,7 @@ type Book = {
   owner?: string;
   image?: string | null;
   isBorrowed: boolean;
+  isOverdue: boolean;
 };
 
 export default function BookList({ books }: { books: Book[] }) {
@@ -133,6 +134,12 @@ export default function BookList({ books }: { books: Book[] }) {
                   {book.isBorrowed && (
                     <span className="ml-2 rounded-full bg-[#E8F1EC] px-2 py-0.5 text-xs text-[#4F7D62]">
                       貸出中
+                    </span>
+                  )}
+
+                  {book.isOverdue && (
+                    <span className="ml-2 rounded-full bg-[#F8E3E0] px-2 py-0.5 text-xs text-[#B5483B]">
+                      延滞中
                     </span>
                   )}
                 </h2>

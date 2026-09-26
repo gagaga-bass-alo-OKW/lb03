@@ -11,6 +11,9 @@ export type BookRequest = {
   status: string;
   token: string;
   createdAt: string;
+  threadTs: string;
+  requesterSlackId: string;
+  ownerSlackId: string;
 };
 
 export const getRequests = cache(async (): Promise<BookRequest[]> => {
@@ -27,7 +30,7 @@ export const getRequests = cache(async (): Promise<BookRequest[]> => {
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: process.env.GOOGLE_SHEETS_ID,
-    range: "requests!A:I",
+    range: "requests!A:L",
   });
 
   const rows = response.data.values ?? [];
@@ -42,6 +45,9 @@ export const getRequests = cache(async (): Promise<BookRequest[]> => {
   status: row[6] ?? "pending",
   token: row[7] ?? "",
   createdAt: row[8] ?? "",
+  threadTs: row[9] ?? "",
+  requesterSlackId: row[10] ?? "",
+  ownerSlackId: row[11] ?? "",
 }));
 })
 

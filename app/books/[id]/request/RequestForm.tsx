@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { formatPeriod, todayJst } from "@/lib/dueDate";
 
 type RequestFormProps = {
   bookId: string;
@@ -14,7 +15,7 @@ export default function RequestForm({ bookId, bookTitle }: RequestFormProps) {
   const [requester, setRequester] = useState("");
   const [requesterSlackId, setRequesterSlackId] = useState("");
   const [requesterPassword, setRequesterPassword] = useState("");
-  const [period, setPeriod] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -35,7 +36,7 @@ export default function RequestForm({ bookId, bookTitle }: RequestFormProps) {
           requester,
           requesterSlackId,
           requesterPassword,
-          period,
+          period: formatPeriod(dueDate),
           comment,
         }),
       });
@@ -99,13 +100,14 @@ router.refresh();
 
       <div>
         <label className="block text-sm font-medium text-gray-700">
-          希望期間
+          返却予定日
         </label>
         <input
-          type="text"
-          value={period}
-          onChange={(event) => setPeriod(event.target.value)}
-          placeholder="例：2週間くらい"
+          type="date"
+          required
+          min={todayJst()}
+          value={dueDate}
+          onChange={(event) => setDueDate(event.target.value)}
           className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2"
         />
       </div>
