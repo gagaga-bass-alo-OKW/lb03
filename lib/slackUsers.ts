@@ -6,7 +6,7 @@ export async function getSlackIdByName(name: string, password?: string): Promise
   const normalize = (s: string) => {
     try {
       return String(s).normalize("NFKC").replace(/[\u200B-\u200F\uFEFF]/g, "").trim().toLowerCase();
-    } catch (e) {
+    } catch {
       return String(s).trim().toLowerCase();
     }
   };
@@ -69,7 +69,7 @@ export async function getSlackIdByName(name: string, password?: string): Promise
           console.log(`  ✓ SHARED MATCH FOUND: ${id}`);
           return id || null;
         }
-      } catch (e) {
+      } catch {
         // on error, skip
         continue;
       }

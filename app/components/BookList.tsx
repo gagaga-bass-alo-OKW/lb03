@@ -111,6 +111,8 @@ export default function BookList({ books }: { books: Book[] }) {
               {/* 画像 */}
               <div className="h-24 w-16 flex-shrink-0 overflow-hidden rounded-md bg-[#E0DED7]">
                 {book.image ? (
+                  // Google Booksの小さな外部サムネイルなので最適化は不要
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={book.image}
                     alt={book.title}

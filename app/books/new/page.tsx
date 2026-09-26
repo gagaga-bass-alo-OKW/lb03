@@ -6,11 +6,24 @@ import { useCallback, useState } from "react";
 import BarcodeScanner from "./BarcodeScanner";
 import { CATEGORIES } from "@/lib/categories";
 
+// Google Books APIの応答のうち、使う項目だけ
+type GoogleBooksResponse = {
+  items?: {
+    volumeInfo: {
+      title?: string;
+      authors?: string[];
+      publisher?: string;
+      description?: string;
+      imageLinks?: { thumbnail?: string };
+    };
+  }[];
+};
+
 export default function NewBookPage() {
   const router = useRouter();
 
   const [isbn, setIsbn] = useState("");
-  const [bookInfo, setBookInfo] = useState<any>(null);
+  const [bookInfo, setBookInfo] = useState<GoogleBooksResponse | null>(null);
 
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
@@ -29,14 +42,7 @@ export default function NewBookPage() {
     if (isFetching) return;
     setIsFetching(true);
     try {
-      console.log(
-        "APIKEY =",
-        process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY
-      );
-
       const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY}`;
-
-      console.log("URL =", url);
 
       const res = await fetch(url);
 
@@ -47,9 +53,7 @@ export default function NewBookPage() {
         return;
       }
 
-      const data = await res.json();
-
-      console.log("DATA =", data);
+      const data: GoogleBooksResponse = await res.json();
 
       // ✅ 本が見つからない
       if (!data.items || data.items.length === 0) {
@@ -66,7 +70,6 @@ export default function NewBookPage() {
       setTitle(volumeInfo.title || "");
       setAuthor(volumeInfo.authors?.join(", ") || "");
       setPublisher(volumeInfo.publisher || "");
-      console.log("DESCRIPTION =", volumeInfo.description);
       setDescription(volumeInfo.description || "");
 
     } catch (error) {
@@ -167,8 +170,14 @@ export default function NewBookPage() {
             </p>
 
             {bookInfo.items[0].volumeInfo.imageLinks?.thumbnail && (
+              // Google Booksの小さな外部サムネイルなので最適化は不要
+              // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={bookInfo.items[0].volumeInfo.imageLinks.thumbnail}
+                // http:// のままだとhttpsページでは混在コンテンツとしてブロックされる
+                src={bookInfo.items[0].volumeInfo.imageLinks.thumbnail.replace(
+                  /^http:\/\//,
+                  "https://"
+                )}
                 alt="book cover"
               />
             )}

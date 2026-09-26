@@ -9,4 +9,3 @@ export async function sendSlackMessage(text: string) {
     headers: { "Content-Type": "application/json" },
   });
 }
-``

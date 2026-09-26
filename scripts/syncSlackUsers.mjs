@@ -42,7 +42,7 @@ async function main() {
           .replace(/[\u200B-\u200F\uFEFF]/g, "")
           .replace(/\s+/g, " ")
           .trim();
-      } catch (e) {
+      } catch {
         return String(s);
       }
     };

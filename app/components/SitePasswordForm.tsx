@@ -27,6 +27,7 @@ export default function SitePasswordForm() {
       const json = await res.json();
       setError(json?.error || "認証に失敗しました");
     } catch (e) {
+      console.error(e);
       setError("通信エラー");
     } finally {
       setLoading(false);
