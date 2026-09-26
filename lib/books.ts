@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import { cache } from "react";
 import { normalizeCategory } from "@/lib/categories";
+import { getSheetId, getWritableSheets } from "@/lib/sheets";
 
 export type Book = {
   id: string;
@@ -56,3 +57,70 @@ export const getBookById = cache(
     return books.find((book) => book.id === id);
   }
 );
+// 登録後に変更できる項目（ISBN・持ち主・登録日時は変えない）
+export type BookEdit = Pick<
+  Book,
+  "title" | "author" | "publisher" | "category" | "reason" | "description"
+>;
+
+async function findBookRow(id: string) {
+  const sheets = getWritableSheets();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: process.env.GOOGLE_SHEETS_ID,
+    range: "books!A:A",
+  });
+  const index = (res.data.values ?? []).findIndex((r) => r[0] === id);
+  return index === -1 ? null : index + 1; // シートの行番号（1始まり）
+}
+
+export async function updateBook(id: string, edit: BookEdit) {
+  const rowNumber = await findBookRow(id);
+  if (!rowNumber) return false;
+
+  const sheets = getWritableSheets();
+  // C〜G列（タイトル・著者・出版社・カテゴリー・所有理由）と J列（説明）
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: process.env.GOOGLE_SHEETS_ID,
+    requestBody: {
+      valueInputOption: "RAW",
+      data: [
+        {
+          range: `books!C${rowNumber}:G${rowNumber}`,
+          values: [[edit.title, edit.author, edit.publisher, edit.category, edit.reason]],
+        },
+        {
+          range: `books!J${rowNumber}`,
+          values: [[edit.description]],
+        },
+      ],
+    },
+  });
+  return true;
+}
+
+export async function deleteBook(id: string) {
+  const [rowNumber, sheetId] = await Promise.all([
+    findBookRow(id),
+    getSheetId("books"),
+  ]);
+  if (!rowNumber || sheetId === null) return false;
+
+  await getWritableSheets().spreadsheets.batchUpdate({
+    spreadsheetId: process.env.GOOGLE_SHEETS_ID,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension: "ROWS",
+              startIndex: rowNumber - 1,
+              endIndex: rowNumber,
+            },
+          },
+        },
+      ],
+    },
+  });
+  return true;
+}

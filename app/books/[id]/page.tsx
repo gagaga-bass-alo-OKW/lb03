@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getBookById } from "@/lib/books";
 import { getRequestsByBookId } from "@/lib/requests";
 import RequestStatusButtons from "./RequestStatusButtons";
+import { isSameName } from "@/lib/names";
+import { getSessionName } from "@/lib/session";
 import { daysOverdue, isOverdue, parseDueDate } from "@/lib/dueDate";
 
 type Props = {
@@ -62,6 +64,9 @@ export default async function Page({ params, searchParams }: Props) {
 
   const hasValidToken = requests.some((r) => r.token === token);
 
+  const me = await getSessionName();
+  const isOwner = !!me && isSameName(book.owner, me);
+
   const sortedRequests = [...requests].sort((a, b) => {
     const order: Record<string, number> = {
       approved: 0,
@@ -98,7 +103,17 @@ export default async function Page({ params, searchParams }: Props) {
           <div className="mt-4 space-y-2 text-sm text-[#5B6C60]">
             <p>出版社：{book.publisher || "未設定"}</p>
             <p>ISBN：{book.isbn || "未設定"}</p>
-            <p>持ち主：{book.owner || "未設定"}</p>
+            <p>
+              持ち主：{book.owner || "未設定"}
+              {isOwner && (
+                <Link
+                  href={`/books/${book.id}/edit`}
+                  className="ml-3 text-[#4F7D62] hover:underline"
+                >
+                  編集する
+                </Link>
+              )}
+            </p>
           </div>
 
           {/* 理由 */}
