@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import BarcodeScanner from "./BarcodeScanner";
 
 export default function NewBookPage() {
   const router = useRouter();
@@ -20,9 +21,10 @@ export default function NewBookPage() {
 
   const [isFetching, setIsFetching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   // ✅ ISBNからGoogle Books API取得
-  const fetchBookInfo = async () => {
+  const fetchBookInfo = async (isbn: string) => {
     if (isFetching) return;
     setIsFetching(true);
     try {
@@ -74,6 +76,14 @@ export default function NewBookPage() {
     }
   };
 
+  // ✅ バーコード読み取り → ISBN入力 & 自動取得
+  const handleDetected = useCallback((code: string) => {
+    setIsScanning(false);
+    setIsbn(code);
+    fetchBookInfo(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <main className="p-8">
       <Link href="/" className="text-[#5B6C60] hover:underline">
@@ -96,19 +106,44 @@ export default function NewBookPage() {
             type="text"
             value={isbn}
             onChange={(e) => setIsbn(e.target.value)}
+            onKeyDown={(e) => {
+              // バーコードリーダーは読み取り後にEnterを送る
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                fetchBookInfo(isbn);
+              }
+            }}
             className="border rounded px-3 py-2 w-full"
             placeholder="978xxxxxxxxxxxx"
           />
         </div>
 
         {/* 取得ボタン */}
-        <button
-          onClick={fetchBookInfo}
-          disabled={isFetching}
-          className="bg-blue-600 text-white px-4 py-2 rounded disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isFetching ? "取得中..." : "書籍情報を取得"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => fetchBookInfo(isbn)}
+            disabled={isFetching}
+            className="bg-blue-600 text-white px-4 py-2 rounded disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isFetching ? "取得中..." : "書籍情報を取得"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsScanning((v) => !v)}
+            disabled={isFetching}
+            className="border border-blue-600 text-blue-600 px-4 py-2 rounded disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isScanning ? "読み取りを中止" : "バーコードで読み取る"}
+          </button>
+        </div>
+
+        {isScanning && (
+          <BarcodeScanner
+            onDetected={handleDetected}
+            onClose={() => setIsScanning(false)}
+          />
+        )}
 
         {/* 取得結果 */}
         {bookInfo && bookInfo.items?.[0] && (
