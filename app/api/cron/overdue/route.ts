@@ -7,10 +7,17 @@ import { daysOverdue, isOverdue, parseDueDate } from "@/lib/dueDate";
 // Vercel Cron から毎朝呼ばれ、返却予定日を過ぎた貸出を Slack で知らせる（vercel.json 参照）
 export async function GET(request: Request) {
   // Vercel Cron は CRON_SECRET を Authorization ヘッダーに付けて呼ぶ
-  if (
-    !process.env.CRON_SECRET ||
-    request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  // （貼り付け時に紛れた前後の空白・改行はヘッダー側では落ちるので、比較前に除く）
+  const cronSecret = process.env.CRON_SECRET?.trim();
+  if (!cronSecret) {
+    console.error("CRON_SECRET が設定されていません");
+    return NextResponse.json(
+      { error: "CRON_SECRET is not configured" },
+      { status: 500 }
+    );
+  }
+  if (request.headers.get("authorization")?.trim() !== `Bearer ${cronSecret}`) {
+    console.error("延滞チェック: Authorization ヘッダーが CRON_SECRET と一致しません");
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
